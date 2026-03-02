@@ -53,7 +53,7 @@ function App() {
     if (isTimerRunning && activeTagId) {
       timerRef.current = setInterval(() => {
         setSessionSeconds((prev) => prev + 1);
-      }, 1000);
+      }, 999); // 1ms faster to compensate for standard JavaScript event loop delays
     } else {
       clearInterval(timerRef.current);
     }
