@@ -50,6 +50,13 @@ function App() {
   // Heatmap UI State
   const [selectedDate, setSelectedDate] = useState(null);
 
+  // Initialize to current year-month (e.g., '2026-03')
+  const [selectedMonthStr, setSelectedMonthStr] = useState(() => {
+    const now = new Date();
+    // Use local time zone string to prevent offset issues
+    return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+  });
+
   const timerRef = useRef(null);
 
   // --- Persistence ---
@@ -123,7 +130,8 @@ function App() {
     }));
 
     // Confirmed end - update daily history
-    const today = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const today = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     setHistory(prev => {
       const dayData = prev[today] || { tags: {}, gym: false };
       const currentTagSeconds = dayData.tags ? (dayData.tags[activeTagId] || 0) : 0;
@@ -162,32 +170,64 @@ function App() {
   const activeTag = tags.find(t => t.id === activeTagId);
 
   // --- Heatmap Logic ---
+  // Generate the 12 months for the current year (Jan-Dec)
+  const monthTabs = useMemo(() => {
+    const tabs = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    // Start from January (0) to December (11)
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(currentYear, i, 1);
+      const monthStr = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+      const shortName = d.toLocaleString('default', { month: 'short' });
+
+      tabs.push({
+        id: monthStr,
+        label: `${shortName} ${currentYear}`
+      });
+    }
+    return tabs; // Jan to Dec
+  }, []);
+
   const heatmapDays = useMemo(() => {
     const days = [];
-    const todayDate = new Date();
+    if (!selectedMonthStr) return days;
 
-    // Normalize today to start of day for consistent calculations
-    todayDate.setHours(0, 0, 0, 0);
+    const [yearStr, monthStr] = selectedMonthStr.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
 
-    // We want 365 days of history
-    const startDate = new Date(todayDate);
-    startDate.setDate(todayDate.getDate() - 364);
+    // Get the first day of the selected month
+    const firstDay = new Date(year, month, 1);
+    const startDayOfWeek = firstDay.getDay(); // 0 is Sunday
 
-    // Pad start with nulls to align with Sundays (0)
-    const startDayOfWeek = startDate.getDay();
+    // Get the number of days in the month
+    const lastDay = new Date(year, month + 1, 0);
+    const numDays = lastDay.getDate();
+
+    // Pad the start with nulls to align the 1st day to the correct weekday
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(null);
     }
 
-    for (let i = 364; i >= 0; i--) {
-      const d = new Date(todayDate);
-      d.setDate(todayDate.getDate() - i);
-      // Correct for timezone offset to avoid previous day edge cases when splitting ISO string
-      const localISO = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-      days.push(localISO);
+    // Add exactly the days in the month
+    for (let i = 1; i <= numDays; i++) {
+      // pad start for valid YYYY-MM-DD
+      const dayStr = i.toString().padStart(2, '0');
+      days.push(`${selectedMonthStr}-${dayStr}`);
     }
+
+    // Pad the end with nulls to complete the last week (optional, but good for consistent grid size)
+    const endDayOfWeek = lastDay.getDay();
+    if (endDayOfWeek < 6) {
+      for (let i = 0; i < 6 - endDayOfWeek; i++) {
+        days.push(null);
+      }
+    }
+
     return days;
-  }, []);
+  }, [selectedMonthStr]);
 
   const calculateScore = (date) => {
     if (!date) return 0;
@@ -224,8 +264,8 @@ function App() {
   };
 
   const getWeekLabels = () => {
-    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-      <div key={day} className={`text-[10px] text-slate-500 h-[14px] flex items-center pr-2 ${i % 2 !== 0 && i !== 0 ? 'invisible' : ''}`}>
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+      <div key={day} className="text-[10px] text-slate-500 h-[18px] flex items-center justify-end pr-2 w-8">
         {day}
       </div>
     ));
@@ -387,26 +427,57 @@ function App() {
 
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 sm:p-6 lg:p-8 backdrop-blur-sm relative overflow-hidden group">
 
-              <div className="overflow-x-auto pb-4 scrollbar-hide">
+              {/* Month Tabs */}
+              <div className="relative w-full h-10 mb-6 border-b border-slate-800/60">
+                <div className="absolute inset-x-0 top-0 overflow-x-auto scrollbar-hide custom-scrollbar-hide h-12 flex">
+                  <div className="flex gap-2 w-max pr-6 items-start h-10">
+                    {monthTabs.map((tab) => {
+                      const isActive = tab.id === selectedMonthStr;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setSelectedMonthStr(tab.id)}
+                          className={`px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-medium transition-colors shrink-0 ${isActive
+                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
+                            }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto pb-4 scrollbar-hide w-full">
                 <div className="min-w-max flex gap-3">
                   {/* Y-axis days */}
-                  <div className="flex flex-col gap-[7px] pt-1 mt-0.5">
+                  <div className="grid grid-rows-7 gap-3">
                     {getWeekLabels()}
                   </div>
 
                   {/* Grid */}
-                  <div className="grid grid-rows-7 grid-flow-col gap-[7px]">
+                  <div className="grid grid-rows-7 grid-flow-col gap-3">
                     {heatmapDays.map((date, index) => {
-                      if (!date) return <div key={`empty-${index}`} className="w-[14px] h-[14px] rounded-[3px] opacity-0" />;
+                      if (!date) return <div key={`empty-${index}`} className="w-[18px] h-[18px] rounded-[4px] opacity-0" />;
                       const score = calculateScore(date);
                       const isSelected = selectedDate === date;
+
+                      // Check if it's the current local day to give it a special outline
+                      const d = new Date();
+                      const todayLocalStr = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                      const isToday = date === todayLocalStr;
+
                       return (
                         <div
                           key={date}
                           onClick={() => setSelectedDate(date)}
-                          className={`w-[14px] h-[14px] rounded-[3px] border cursor-pointer transition-all duration-300
+                          className={`w-[18px] h-[18px] rounded-[4px] border cursor-pointer transition-all duration-300
                             ${getColorClass(score)}
-                            ${isSelected ? 'ring-2 ring-white scale-125 z-10' : 'border-slate-800/50 hover:scale-125 hover:z-10 hover:border-slate-600'}
+                            ${isSelected ? 'ring-2 ring-white scale-125 z-10' : ''}
+                            ${!isSelected && isToday ? 'ring-2 ring-blue-500/70 border-none' : 'hover:scale-125 hover:z-10 hover:border-slate-600'}
+                            ${!isSelected && !isToday ? 'border-slate-800/50' : ''}
                           `}
                           title={`${date}: ${Math.round(score)} pts`}
                         />
