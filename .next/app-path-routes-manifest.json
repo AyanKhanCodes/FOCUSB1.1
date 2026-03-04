@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
+  "/api/auth/forgot-password/route": "/api/auth/forgot-password",
+  "/api/auth/reset-password/route": "/api/auth/reset-password",
+  "/api/auth/verify-otp/route": "/api/auth/verify-otp",
+  "/api/data/route": "/api/data",
+  "/forgot-password/page": "/forgot-password",
+  "/login/page": "/login",
+  "/page": "/"
+}
