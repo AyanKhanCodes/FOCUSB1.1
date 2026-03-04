@@ -11,7 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+.env*.local
 
+# Next.js
+.next
+out
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
