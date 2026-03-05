@@ -13,7 +13,13 @@ export const authOptions = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                await connectToDatabase();
+                try {
+                    await connectToDatabase();
+                } catch (dbError) {
+                    console.error('[NextAuth] MongoDB connection failed:', dbError.message);
+                    throw new Error('Database connection failed. Please try again later.');
+                }
+
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error('Please enter an email and password');
                 }
@@ -56,7 +62,8 @@ export const authOptions = {
         }
     },
     pages: {
-        signIn: '/login', // Redirects to our custom login page
+        signIn: '/login',
+        error: '/login', // Redirect errors to login page instead of broken /api/auth/error
     },
     secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_local_dev_only",
 };

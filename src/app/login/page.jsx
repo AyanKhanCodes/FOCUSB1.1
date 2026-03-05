@@ -1,15 +1,30 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Activity } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+
+    // Check if NextAuth redirected us here with an error
+    const searchParams = useSearchParams();
+    const urlError = searchParams.get('error');
+
+    const getErrorMessage = (code) => {
+        if (!code) return '';
+        switch (code) {
+            case 'CredentialsSignin': return 'Sign in failed. Check the details you provided are correct.';
+            case 'Configuration': return 'Server configuration error. Please contact support.';
+            case 'AccessDenied': return 'Access denied.';
+            default: return `Authentication error: ${code}. Please try again.`;
+        }
+    };
+
+    const [error, setError] = useState(getErrorMessage(urlError));
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -100,5 +115,19 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+                <div className="w-full max-w-md bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 backdrop-blur-xl shadow-2xl flex justify-center">
+                    <div className="animate-pulse w-16 h-16 bg-blue-600/20 rounded-2xl"></div>
+                </div>
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }
