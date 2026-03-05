@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import connectToDatabase from "../lib/mongodb";
+import connectToDatabase from "./mongodb";
 import User from "../models/User";
 
 export const authOptions = {
@@ -65,7 +65,3 @@ export const authOptions = {
     },
     secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_local_dev_only",
 };
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST, authOptions as options };
