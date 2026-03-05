@@ -63,7 +63,7 @@ export const authOptions = {
     },
     pages: {
         signIn: '/login',
-        error: '/login', // Redirect errors to login page instead of broken /api/auth/error
+        error: '/login',
     },
     secret: process.env.NEXTAUTH_SECRET || "fallback_secret_for_local_dev_only",
 };
